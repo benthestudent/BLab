@@ -1,6 +1,10 @@
 <h1>Java Soundboard</h1>
 Imitating the popular sound and video cue software QLab, BLab works on Windows systems to cue and play sound effects and music clips.
   
+ <h2>How to Download</h2>
+ Download the zip and extract to desired directory.
+ Open run.bat file.
+ 
  <h2>How to Use</h2>
  
  <h3>New Project</h3>
