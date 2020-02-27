@@ -23,9 +23,12 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.xml.parsers.DocumentBuilder;
@@ -46,6 +49,8 @@ public class SoundBoardUI extends javax.swing.JFrame{
     private boolean playing;
     private int currentCueIndex;
     private int currentCuePlaying;
+    private boolean computerAction;
+    private boolean initialized;
     
     /**
      * Creates new form SoundBoardUI
@@ -54,6 +59,8 @@ public class SoundBoardUI extends javax.swing.JFrame{
         playing = false;
         currentCueIndex = 0;
         currentCuePlaying = 0;
+        computerAction = false;
+        initialized = false;
        Action spaceAction = new AbstractAction()
         {
             @Override
@@ -153,6 +160,29 @@ public class SoundBoardUI extends javax.swing.JFrame{
                 "Cues", "Length"
             }
         ));
+        tblCueList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+            public void valueChanged(ListSelectionEvent evt) {
+                if (!evt.getValueIsAdjusting()) {
+                    tblCueListSelectionChanged(evt);
+                }
+            }
+        });
+        tblCueList.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tblCueListMouseClicked(evt);
+            }
+        });
+        tblCueList.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                tblCueListPropertyChange(evt);
+            }
+        });
+        tblCueList.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                tblCueListKeyPressed(evt);
+            }
+        });
         jScrollPane2.setViewportView(tblCueList);
 
         volumeSlider.setValue(100);
@@ -387,19 +417,15 @@ public class SoundBoardUI extends javax.swing.JFrame{
     private void play()
     {
     Cue currentCue = this.getCurrentCue();
-        if(!playing)
+        if(!playing && currentCue != null)
         {
             currentCue.play();
             btnPlay.setText("Pause");
             playing = true;
             currentCuePlaying = currentCueIndex;
-            if(currentShow.size() > currentCueIndex + 1)
-            {
-            currentCueIndex++;
-            }
             this.changeRows(currentCueIndex, currentCuePlaying);
         }
-        else
+        else if(playing)
         {
             currentShow.getCueAt(currentCuePlaying).pause();
             String name;
@@ -425,6 +451,12 @@ public class SoundBoardUI extends javax.swing.JFrame{
             String name;
             name = currentShow.getCueAt(currentCuePlaying).getName();
             tblCueList.setValueAt(name, (currentCuePlaying), 0);
+            if(currentShow.size() > currentCueIndex + 1 && currentCueIndex == currentCuePlaying)
+            {
+            currentCueIndex++;
+            }
+            
+            this.changeRows(currentCueIndex);
         }
     }
     private void btnNextActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNextActionPerformed
@@ -449,9 +481,14 @@ public class SoundBoardUI extends javax.swing.JFrame{
     }//GEN-LAST:event_btnLastActionPerformed
 
     private void volumeSliderStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_volumeSliderStateChanged
-        currentShow.editCueVolume(currentCuePlaying, volumeSlider.getValue());
-        currentShow.getCueAt(currentCuePlaying).setVolume(volumeSlider.getValue());
-        pnlMainContainer.requestFocus();
+        if(!this.computerAction){
+            currentShow.editCueVolume(currentCueIndex, volumeSlider.getValue());
+            currentShow.getCueAt(currentCueIndex).setVolume(volumeSlider.getValue());
+            pnlMainContainer.requestFocus();
+        }
+        else{
+            this.computerAction = false;
+        }
     }//GEN-LAST:event_volumeSliderStateChanged
 
     private void mnuRemoveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mnuRemoveActionPerformed
@@ -475,17 +512,48 @@ public class SoundBoardUI extends javax.swing.JFrame{
 
         pnlMainContainer.requestFocus();
     }//GEN-LAST:event_mnuChangeNameActionPerformed
+
+    private void tblCueListSelectionChanged(ListSelectionEvent evt) {
+        System.out.println("selection changed");
+        if(initialized){
+        this.updateCurrentCueIndex();
+        this.computerAction = true;
+        volumeSlider.setValue(currentShow.getCueAt(currentCueIndex).getVolume());
+        System.out.println("CurrentCueIndex: " + currentCueIndex);
+        }
+    }
+    private void tblCueListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tblCueListMouseClicked
+        if(initialized){
+        this.updateCurrentCueIndex();
+        this.computerAction = true;
+        volumeSlider.setValue(currentShow.getCueAt(currentCueIndex).getVolume());
+        }
+    }//GEN-LAST:event_tblCueListMouseClicked
+
+    private void tblCueListPropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_tblCueListPropertyChange
+        // TODO add your handling code here:
+        
+    }//GEN-LAST:event_tblCueListPropertyChange
+
+    private void tblCueListKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tblCueListKeyPressed
+        
+    }//GEN-LAST:event_tblCueListKeyPressed
     
     private void updateCurrentCueIndex()
     {
-        currentCueIndex = tblCueList.getSelectedRows()[0];
+        System.out.println(tblCueList.getSelectedRow());
+        if(tblCueList.getSelectedRow() != -1){
+        currentCueIndex = tblCueList.getSelectedRow();
+        }
     }
     
     private Cue getCurrentCue()
     {
         Cue currentCue = null;
-        updateCurrentCueIndex();
-        currentCue = currentShow.getCueAt(tblCueList.getSelectedRows()[0]);
+        //updateCurrentCueIndex();
+        if(tblCueList.getSelectedRow() != -1){
+            currentCue = currentShow.getCueAt(tblCueList.getSelectedRow());
+        }
         return currentCue;
     }    
     
@@ -495,6 +563,8 @@ public class SoundBoardUI extends javax.swing.JFrame{
         {
         tblCueList.clearSelection();
         tblCueList.addRowSelectionInterval(index, index);
+        this.computerAction = true;
+        volumeSlider.setValue(currentShow.getCueAt(index).getVolume());
         }
     }
     
@@ -507,6 +577,8 @@ public class SoundBoardUI extends javax.swing.JFrame{
         name = currentShow.getCueAt(playingIndex).getName() + " - playing";
         tblCueList.setValueAt(name, (playingIndex), 0);
         tblCueList.addRowSelectionInterval(index, index);
+        this.computerAction = true;
+        volumeSlider.setValue(currentShow.getCueAt(index).getVolume());
         }
     }
     
@@ -516,8 +588,10 @@ public class SoundBoardUI extends javax.swing.JFrame{
        tblCueList.setModel(currentShow.getCueList());
        if(currentShow.size() > 0)
         {
+            initialized = true;
             btnPlay.setEnabled(true);
             volumeSlider.setEnabled(true);
+            volumeSlider.setValue(currentShow.getCueAt(currentCueIndex).getVolume());
             btnStop.setEnabled(true);
             mnuChangeName.setEnabled(true);
             mnuRemove.setEnabled(true);
